@@ -4,18 +4,20 @@ from pyhocon import ConfigFactory
 import os
 conf = ConfigFactory.parse_file(os.path.join(os.path.dirname(__file__), '..', 'configure.conf'))
 os.chdir(conf.get_string('work_path'))
+import tqdm
 import collections
 
 class AsymmetricalWeightedGraph:
     """
     采样使用的权重非对称图
 
+    双向权重不同
+
     无向图: A -> B 必然有 B -> A
     权重非对称: A -> B 权重 为 w1， B -> A 权重 为 w2
 
 
     """
-
     def __init__(self, file_path: str):
         """
         :param file_path: 读取 graph file 的地址
@@ -26,6 +28,7 @@ class AsymmetricalWeightedGraph:
             其中 格式保证 v1 < v2
         """
         self.file_path = file_path
+        print("load graph from {}".format(self.file_path))
         lines = None
         with open(self.file_path, 'r') as f:
             lines = f.readlines()
@@ -43,13 +46,13 @@ class AsymmetricalWeightedGraph:
 
         # self._adj 形如 {v0 : {v1 : w1, v2 : w2}, ...}
         self._adj = {}
-        for each_line in lines[1:]:
+        for each_line in tqdm.tqdm(lines[1:]):
             a, b, weight = (int(i) for i in each_line.split())
             if a == b:
                 continue
             self.add_adj(a, b, weight)
 
-        self.walk_map = {}
+        self._walk_map = {}
         self.asymmetry()
 
     def add_adj(self, a, b, w):
@@ -119,14 +122,12 @@ class AsymmetricalWeightedGraph:
     def __copy__(self):
         return AsymmetricalWeightedGraph(self._filename)
 
-    def get_adj(self):
-        return self._adj
-
     def sort_weighted(self):
         """
         把 self._adj中每个 adj 按照权重从大到小排列
         """
-        for key in self._adj:
+        print("Sort graph weight")
+        for key in tqdm.tqdm(self._adj.keys()):
             ordered_dict = self._adj[key]
             weights = list(ordered_dict.values())
             weight_set = set(weights)
@@ -141,7 +142,8 @@ class AsymmetricalWeightedGraph:
 
     def asymmetry(self):
         self.sort_weighted()
-        for vertex in self._adj:
+        print("Asymmetry the weight.")
+        for vertex in tqdm.tqdm(self._adj.keys()):
             adjacent_vertices = self._adj[vertex]
             log_adjacent_vertices = collections.OrderedDict()
             # 对所有原有的连击 weight 做对数化处理
@@ -156,7 +158,10 @@ class AsymmetricalWeightedGraph:
                 director_weight = (accumulate + log_w) / sum_log_weights
                 vertex_direct[v] = director_weight
                 accumulate += log_w
-            self.walk_map[vertex] = vertex_direct
+            self._walk_map[vertex] = vertex_direct
+
+    def get_work_map(self):
+        return self._walk_map
 
 if __name__ == '__main__':
     graph_file_path = conf.get_string('graph_file_path')

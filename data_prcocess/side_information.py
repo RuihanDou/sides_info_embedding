@@ -40,11 +40,37 @@ def get_side_information_dict(side_info_path: str = os.path.join(conf.get_string
     spark.stop()
     return side_info_dict
 
-
+def get_neg_samp_id_side_info(item_to_neg_samp_id_dict: dict, side_info_dict: dict) ->dict:
+    neg_samp_id_side_info_dict = {}
+    for item, id in item_to_neg_samp_id_dict.items():
+        # 有可能有没有统计到side info 的 item
+        if item not in side_info_dict:
+            neg_samp_id_side_info_dict[id] = [0] * conf.get_int('side_info_max_num_tags')
+        else:
+            neg_samp_id_side_info_dict[id] = side_info_dict[item]
+    return neg_samp_id_side_info_dict
 
 
 
 if __name__ == '__main__':
+
+    # pickle 读取 dict
+    side_info_dict = {}
+    with open(conf.get_string('side_info_dict_path'), 'rb') as handle:
+        side_info_dict = pkl.load(handle)
+
+    # pickle 读取 item_to_neg_samp_id dict
+    item_2_id_dict = {}
+    with open(conf.get_string('item_to_neg_samp_id_path'), 'rb') as handle:
+        item_2_id_dict = pkl.load(handle)
+
+    neg_samp_id_side_info_dict = get_neg_samp_id_side_info(item_2_id_dict, side_info_dict)
+    with open(conf.get_string('neg_samp_id_side_info_work_path'), 'wb') as handle:
+        pkl.dump(neg_samp_id_side_info_dict, handle, protocol=pkl.HIGHEST_PROTOCOL)
+
+    print("success.")
+
+    print(neg_samp_id_side_info_dict)
     # catagory_list = conf.get_list('side_info_category')
     # print(catagory_list)
 
@@ -54,11 +80,11 @@ if __name__ == '__main__':
     #     pkl.dump(side_info_dict, handle, protocol=pkl.HIGHEST_PROTOCOL)
 
     # # pickle 读取 dict
-    read_dict = {}
-    with open(os.path.join('data', 'side_info_dict.pickle'), 'rb') as handle:
-        read_dict = pkl.load(handle)
-
-    print("OK")
+    # read_dict = {}
+    # with open(os.path.join('data', 'side_info_dict.pickle'), 'rb') as handle:
+    #     read_dict = pkl.load(handle)
+    #
+    # print("OK")
     # side_info_path = os.path.join(conf.get_string('work_path'), conf.get_string('side_infomation_path'))
     # tokenizer = load_tokenzier(os.path.join(conf.get_string('work_path'), conf.get_string('tokenizer_path')))
     # spark = SparkSession.builder.master('local').appName("side_information") \
