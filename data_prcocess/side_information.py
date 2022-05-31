@@ -7,7 +7,8 @@ from pyspark.sql import *
 import pickle as pkl
 from utils.tokenizer_tool import load_tokenzier
 from tensorflow import keras
-
+from utils.access_tool import *
+import tensorflow as tf
 
 
 def get_side_information_dict(side_info_path: str = os.path.join(conf.get_string('work_path'), conf.get_string('side_infomation_path')),
@@ -50,6 +51,20 @@ def get_neg_samp_id_side_info(item_to_neg_samp_id_dict: dict, side_info_dict: di
             neg_samp_id_side_info_dict[id] = side_info_dict[item]
     return neg_samp_id_side_info_dict
 
+def get_set_info_tensor(neg_samp_id_side_info_dict: dict = load_dict(conf.get_string('neg_samp_id_side_info_work_path'))):
+    const_list = []
+    for k, v in neg_samp_id_side_info_dict.items():
+        const_list.append(v)
+    side_info_constant_tensor = tf.constant(const_list, dtype=tf.int64)
+    return side_info_constant_tensor
+
+def get_set_info_mask(neg_samp_id_side_info_dict: dict = load_dict(conf.get_string('neg_samp_id_side_info_work_path'))):
+    const_list = []
+    for k, v in neg_samp_id_side_info_dict.items():
+        const_list.append(v)
+    side_info_constant_tensor = tf.constant(const_list, dtype=tf.int64)
+    mask = tf.cast(tf.math.not_equal(side_info_constant_tensor, 0), tf.float32)
+    return mask
 
 
 if __name__ == '__main__':
