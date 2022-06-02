@@ -51,14 +51,14 @@ def get_neg_samp_id_side_info(item_to_neg_samp_id_dict: dict, side_info_dict: di
             neg_samp_id_side_info_dict[id] = side_info_dict[item]
     return neg_samp_id_side_info_dict
 
-def get_set_info_tensor(neg_samp_id_side_info_dict: dict = load_dict(conf.get_string('neg_samp_id_side_info_work_path'))):
+def get_side_info_tensor(neg_samp_id_side_info_dict: dict = load_dict(conf.get_string('neg_samp_id_side_info_work_path'))):
     const_list = []
     for k, v in neg_samp_id_side_info_dict.items():
         const_list.append(v)
     side_info_constant_tensor = tf.constant(const_list, dtype=tf.int64)
     return side_info_constant_tensor
 
-def get_set_info_mask(neg_samp_id_side_info_dict: dict = load_dict(conf.get_string('neg_samp_id_side_info_work_path'))):
+def get_side_info_mask(neg_samp_id_side_info_dict: dict = load_dict(conf.get_string('neg_samp_id_side_info_work_path'))):
     const_list = []
     for k, v in neg_samp_id_side_info_dict.items():
         const_list.append(v)
