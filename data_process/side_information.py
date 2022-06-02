@@ -5,14 +5,14 @@ os.chdir(conf.get_string('work_path'))
 
 from pyspark.sql import *
 import pickle as pkl
-from utils.tokenizer_tool import load_tokenzier
+from utils.tokenizer_tool import load_tokenizer
 from tensorflow import keras
 from utils.access_tool import *
 import tensorflow as tf
 
 
 def get_side_information_dict(side_info_path: str = os.path.join(conf.get_string('work_path'), conf.get_string('side_infomation_path')),
-                              tokenizer: keras.preprocessing.text.Tokenizer = load_tokenzier(os.path.join(conf.get_string('work_path'), conf.get_string('tokenizer_path'))),
+                              tokenizer: keras.preprocessing.text.Tokenizer = load_tokenizer(os.path.join(conf.get_string('work_path'), conf.get_string('tokenizer_path'))),
                               padding_max_size: int = conf.get_int('side_info_max_num_tags'), catagory_list: list = conf.get_list('side_info_category')) -> dict:
     """
     该函数获取 side_info 的 dict

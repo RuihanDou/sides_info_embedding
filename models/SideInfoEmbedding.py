@@ -2,25 +2,23 @@ from pyhocon import ConfigFactory
 import os
 conf = ConfigFactory.parse_file(os.path.join(os.path.dirname(__file__), '..', 'configure.conf'))
 os.chdir(conf.get_string('work_path'))
-# tf.gather(params=side_info_constant_tensor, indices=look_up_tensor)
-# masked_tensor =  tf.einsum('bxy,bx->bxy', origin_tensor, mask)
+
 from data_process.side_information import get_side_info_tensor, get_side_info_mask
 from data_process.skip_gram_negative_sampling import *
 import tensorflow as tf
 
 
-# input pair 的大小 都是 (batch_size, )
 class SideInfoEmbedding(tf.keras.Model):
     def __init__(self, side_info_size: int = conf.get_int('side_info_tag_size')
                  , embedding_dim: int = conf.get_int('embedding_dim')
                  , side_info_indices_tensor=get_side_info_tensor()
-                 , side_info_indices_mask=get_side_info_mask()):
+                 , side_info_indices_mask=get_side_info_mask()
+                 ):
         super(SideInfoEmbedding, self).__init__()
         self.side_info_size = side_info_size
         self.embedding_dim = embedding_dim
         self.side_info_indices_tensor = side_info_indices_tensor
         self.side_info_indices_mask = side_info_indices_mask
-
         self.side_info_embedding = tf.keras.layers.Embedding(self.side_info_size, self.embedding_dim, name='side_info_embedding')
 
     def call(self, pair):
