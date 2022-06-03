@@ -11,9 +11,9 @@ from utils.access_tool import *
 
 def extract_side_info_vectors(embedding_model: SideInfoEmbedding
                            , tokenizer: keras.preprocessing.text.Tokenizer
-                           , csv_path: str = conf.get_str('side_info_vec_csv_path ')
-                           , tag_dict_path: str = conf.get_str('side_info_tag_vec_dict_path')
-                           , id_dict_path: str = conf.get_str('side_info_id_vec_dict_path')) -> pd.DataFrame:
+                           , csv_path: str = conf.get_string('side_info_vec_csv_path ')
+                           , tag_dict_path: str = conf.get_string('side_info_tag_vec_dict_path')
+                           , id_dict_path: str = conf.get_string('side_info_id_vec_dict_path')) -> pd.DataFrame:
     """
     从训练完成的 模型中抽取出 side info 的 embedding矢量
     :param embedding_model: embedding 模型
@@ -21,9 +21,9 @@ def extract_side_info_vectors(embedding_model: SideInfoEmbedding
     :param csv_path: 抽取的向量存储csv 文件的路径
     :param tag_dict_path: side info 的 tag -> vec 的 dict 存储路径
     :param id_dict_path: side info 的 id -> vec 的 dict 存储路径
-    :return:
+    :return: 本函数返回 pd.DataFrame
     """
-    embedding_arrays = embedding_model.get_layer(conf.get_str('layer_name')).get_weights()[0]
+    embedding_arrays = embedding_model.get_layer(conf.get_string('layer_name')).get_weights()[0]
     id_2_tag_dict = tokenizer.index_word
     if len(id_2_tag_dict) + 1 != embedding_arrays.shape[0]:
         raise ValueError("The embedding model is not match the tokenizer !")
@@ -46,11 +46,11 @@ def extract_side_info_vectors(embedding_model: SideInfoEmbedding
     return df
 
 def extract_item_vectors(embedding_model: SideInfoEmbedding
-                         , item_id_side_info_dict: dict = load_dict(conf.get_str('neg_samp_id_side_info_work_path'))
-                         , id_to_item_dict: dict = load_dict(conf.get_str('neg_samp_id_to_item_path'))
-                         , csv_path: str = conf.get_str('item_vec_csv_path ')
-                         , item_dict_path: str = conf.get_str('item_vec_dict_path')
-                         , id_dict_path: str = conf.get_str('item_id_vec_dict_path')) -> pd.DataFrame:
+                         , item_id_side_info_dict: dict = load_dict(conf.get_string('neg_samp_id_side_info_work_path'))
+                         , id_to_item_dict: dict = load_dict(conf.get_string('neg_samp_id_to_item_path'))
+                         , csv_path: str = conf.get_string('item_vec_csv_path ')
+                         , item_dict_path: str = conf.get_string('item_vec_dict_path')
+                         , id_dict_path: str = conf.get_string('item_id_vec_dict_path')) -> pd.DataFrame:
     """
     从训练完成的 模型中抽取 side info 的矢量 组合成 item 的矢量
     :param embedding_model: embedding 模型
@@ -59,7 +59,7 @@ def extract_item_vectors(embedding_model: SideInfoEmbedding
     :param csv_path: 抽取的向量存储csv 文件的路径
     :param item_dict_path: item 的 tag -> vec 的 dict 存储路径
     :param id_dict_path: item 的 id -> vec 的 dict 存储路径
-    :return:
+    :return: 本函数返回 pd.DataFrame
     """
     embedding_arrays = embedding_model.get_layer(embedding_model.layer_name).get_weights()[0]
     items = []

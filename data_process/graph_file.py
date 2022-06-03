@@ -5,11 +5,12 @@ os.chdir(conf.get_string('work_path'))
 from pyspark.sql import *
 sequence_category = conf.get_string('sequence_category')
 
-def sequences_dataframe_to_graph_pair_file(sequences_path: str = conf.get_string('sequences_path'),graph_file_path: str = conf.get_string('graph_file_path')):
+def sequences_dataframe_to_graph_pair_file(sequences_path: str = conf.get_string('sequences_path')
+                                           , graph_file_path: str = conf.get_string('graph_file_path')):
     """
     把点击序列文件，转化为带权图文件
-    :param sequences_path:  点击序列文件地址
-    :param graph_file_path:   存储的带权图文件
+    :param sequences_path:  点击序列 csv 文件地址路径
+    :param graph_file_path:   存储的带权图 txt 文件路径
     :return:
     """
     spark = SparkSession.builder.master('local').appName("side_information") \

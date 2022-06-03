@@ -13,13 +13,14 @@ class SideInfoEmbedding(tf.keras.Model):
                  , embedding_dim: int = conf.get_int('embedding_dim')
                  , side_info_indices_tensor=get_side_info_tensor()
                  , side_info_indices_mask=get_side_info_mask()
+                 , layer_name: str = conf.get_string('layer_name')
                  ):
         super(SideInfoEmbedding, self).__init__()
         self.side_info_size = side_info_size
         self.embedding_dim = embedding_dim
         self.side_info_indices_tensor = side_info_indices_tensor
         self.side_info_indices_mask = side_info_indices_mask
-        self.side_info_embedding = tf.keras.layers.Embedding(self.side_info_size, self.embedding_dim, name='side_info_embedding')
+        self.side_info_embedding = tf.keras.layers.Embedding(self.side_info_size, self.embedding_dim, name=layer_name)
 
     def call(self, pair):
         # targets.shape = (batch_size, ) , contexts.shape = (batch_size, )

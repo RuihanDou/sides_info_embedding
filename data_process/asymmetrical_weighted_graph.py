@@ -4,7 +4,7 @@ from pyhocon import ConfigFactory
 import os
 conf = ConfigFactory.parse_file(os.path.join(os.path.dirname(__file__), '..', 'configure.conf'))
 os.chdir(conf.get_string('work_path'))
-import tqdm
+from tqdm import tqdm
 import collections
 
 class AsymmetricalWeightedGraph:
@@ -46,7 +46,7 @@ class AsymmetricalWeightedGraph:
 
         # self._adj 形如 {v0 : {v1 : w1, v2 : w2}, ...}
         self._adj = {}
-        for each_line in tqdm.tqdm(lines[1:]):
+        for each_line in tqdm(lines[1:]):
             a, b, weight = (int(i) for i in each_line.split())
             if a == b:
                 continue
@@ -127,7 +127,7 @@ class AsymmetricalWeightedGraph:
         把 self._adj中每个 adj 按照权重从大到小排列
         """
         print("Sort graph weight")
-        for key in tqdm.tqdm(self._adj.keys()):
+        for key in tqdm(self._adj.keys()):
             ordered_dict = self._adj[key]
             weights = list(ordered_dict.values())
             weight_set = set(weights)
@@ -141,9 +141,16 @@ class AsymmetricalWeightedGraph:
             self._adj[key] = sorted_ordered_dict
 
     def asymmetry(self):
+        """
+            初始化就会进行一次权重非对称化处理，用于生成游走策略 self._walk_map
+
+            注意，如果有 edge 和 vertex 的 增删改，需要重新 asymmetry 后才能 使用 增删改之后的 游走策略
+
+        :return:
+        """
         self.sort_weighted()
         print("Asymmetry the weight.")
-        for vertex in tqdm.tqdm(self._adj.keys()):
+        for vertex in tqdm(self._adj.keys()):
             adjacent_vertices = self._adj[vertex]
             log_adjacent_vertices = collections.OrderedDict()
             # 对所有原有的连击 weight 做对数化处理
@@ -160,7 +167,16 @@ class AsymmetricalWeightedGraph:
                 accumulate += log_w
             self._walk_map[vertex] = vertex_direct
 
-    def get_work_map(self):
+    def get_walk_map(self):
+        """
+            游走策略 形如 {vertex_0 : {v1 : 0.1, v2 : 0.3, v3 : 0.7, v4 : 1.0} }
+            其中 图 邻接map value的值在 (0,1) 之间，且依次上升， 最后一位的value一定是1.0
+
+            使用游走策略时，使用random.random() 生成 一个 [0, 1) 区间内的随机数 dice，
+        然后使用 dice 依次跟 邻接map中的每个 value 相比，一旦 dice <= value，则对应key所存的 v 为下一步游走到的节点
+
+        :return: dict
+        """
         return self._walk_map
 
 if __name__ == '__main__':
