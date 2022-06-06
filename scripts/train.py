@@ -2,11 +2,20 @@ from pyhocon import ConfigFactory
 import os
 conf = ConfigFactory.parse_file(os.path.join(os.path.dirname(__file__), '..', 'configure.conf'))
 os.chdir(conf.get_string('work_path'))
+from utils.access_tool import *
+from utils.tokenizer_tool import *
+from data_process.side_information import *
+from data_process.asymmetrical_weighted_graph import AsymmetricalWeightedGraph
+from data_process.graph_file import sequences_dataframe_to_graph_pair_file
+from data_process.random_walk_sequence_generator import RandomWalkSequenceGenerator
+from data_process.skip_gram_negative_sampling import generate_train_epoch_dataset
+from models.SideInfoEmbedding import SideInfoEmbedding
 
 """
 从 configure 里解析 训练的配置
 """
 
+# side information 的表格存储路径
 side_infomation_path = conf.get_string('side_infomation_path')
 # 序列表格路径
 sequences_path = conf.get_string('side_infomation_path')
@@ -15,7 +24,7 @@ tokenizer_path = conf.get_string('tokenizer_path')
 # item 对应side info
 side_info_dict_path = conf.get_string('side_info_dict_path')
 # 连续整数空间中id 对应side info
-neg_samp_id_side_info_work_path = conf.get_string('neg_samp_id_side_info_work_path')
+neg_samp_id_to_side_info_dict_path = conf.get_string('neg_samp_id_to_side_info_dict_path')
 # 存储图的路径
 graph_file_path = conf.get_string('graph_file_path')
 # 存储一个epoch随机游走序列路径
@@ -48,12 +57,16 @@ walk_end_probability = conf.get_float('walk_end_probability')
 vertices_num = conf.get_int('vertices_num')
 window_size = conf.get_int('window_size')
 negative_sample_rate = conf.get_float('negative_sample_rate')
+# 训练迭代数
+epochs = conf.get_int('epochs')
 # 训练批大小
 batch_size = conf.get_int('batch_size')
 # shuffle 用的缓存大小
 buffer_size = conf.get_int('buffer_size')
 # embedding layer 的名称
 layer_name = conf.get_string('layer_name')
+# callbacks存储位置
+callbacks_log = conf.get_string('callbacks_log')
 # 存储训练完成的 side_info 的 csv 文件 包含三列 id， tag， vec
 side_info_vec_csv_path = conf.get_string('side_info_vec_csv_path')
 # 存储训练完成后的 side_info 的 tag -> vec 的dict
@@ -66,3 +79,86 @@ item_vec_csv_path = conf.get_string('item_vec_csv_path')
 item_vec_dict_path = conf.get_string('item_vec_dict_path')
 # 存储训练完成后的 item 的 id -> vec 的dict
 item_id_vec_dict_path = conf.get_string('item_id_vec_dict_path')
+
+
+
+
+
+def prepare_train():
+    """
+    第一步  side_info 预处理
+
+    读取 side info 的 csv 文件 存储 dict
+    """
+    side_info_dict = get_side_information_dict(side_info_path=side_infomation_path
+                                               , tokenizer=load_tokenizer(tokenizer_path)
+                                               , padding_max_size=side_info_max_num_tags
+                                               , catagory_list=side_info_category)
+    save_dict(side_info_dict_path, side_info_dict)
+    """
+    第二步 使用点击序列组成图 生成图文件
+    """
+    sequences_dataframe_to_graph_pair_file(sequences_path=sequences_path, graph_file_path=graph_file_path)
+    """
+    第三步 通过图文件，生成图对象, 并且将图作为 随机游走对象 的初始参数构建 随机游走对象
+    """
+    graph = AsymmetricalWeightedGraph(file_path=graph_file_path)
+
+    random_walk = RandomWalkSequenceGenerator(asymmerical_weighted_graph=graph
+                                              , max_walk_seq_length=max_walk_seq_length
+                                              , min_walk_seq_length=min_walk_seq_length
+                                              , walk_end_probability=walk_end_probability
+                                              , walk_sequence_file_path=walk_sequence_file_path
+                                              , item_to_neg_samp_id_path=item_to_neg_samp_id_path
+                                              , neg_samp_id_to_item_path=neg_samp_id_to_item_path)
+    """
+    第四步 把 side_info 关联上 处理完的图(经过random walk生成，item有了连续空间的id编码，图中 vertex 数量小于全量 item)
+    
+    并 储存
+    """
+    neg_samp_id_side_info_dict = get_neg_samp_id_side_info_dict(item_to_neg_samp_id_dict=load_dict(item_to_neg_samp_id_path), side_info_dict=side_info_dict)
+    save_dict(neg_samp_id_to_side_info_dict_path, neg_samp_id_side_info_dict)
+
+    """
+    第五步 side info 编码为对应tensor
+    """
+    side_info_tensor = get_side_info_tensor(neg_samp_id_side_info_dict)
+    side_info_mask = get_side_info_mask(neg_samp_id_side_info_dict)
+
+    """
+    返回预训练 数据准备元组
+    (随机游走对象, side info tensor, side info mask)
+    """
+
+    return random_walk, side_info_tensor, side_info_mask
+
+
+
+def train():
+    """
+    数据准备
+    """
+    random_walk, side_info_tensor, side_info_mask = prepare_train()
+    """
+    初始化模型
+    """
+    embedding_model = SideInfoEmbedding(side_info_size=side_info_tag_size, embedding_dim=embedding_dim,
+                                        side_info_indices_tensor=side_info_tensor,
+                                        side_info_indices_mask=side_info_mask, layer_name=layer_name)
+
+    embedding_model.compile(optimizer='adam', loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
+                            metrics=['accuracy'])
+
+    # 由于初步观察，只需要tensorboard一种call_back
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=callbacks_log)
+
+    for epoch in epochs:
+        print("epoch {%03d} begin")
+        random_walk.generate_epoch()
+        dataset = generate_train_epoch_dataset(walk_sequence_path=walk_sequence_file_path,
+                                               item_to_id_dict=item_to_neg_samp_id_path, vertex_num=vertices_num,
+                                               window_size=window_size, negative_sample_rate=negative_sample_rate,
+                                               batch_size=batch_size, buffer_size=buffer_size)
+        embedding_model.fit(dataset, epochs=1, callbacks=[tensorboard_callback])
+        random_walk.clean_epoch()
+        print("epoch {%03d} finished.\n")

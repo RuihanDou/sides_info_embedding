@@ -42,7 +42,7 @@ def get_side_information_dict(side_info_path: str = conf.get_string('side_infoma
     spark.stop()
     return side_info_dict
 
-def get_neg_samp_id_side_info(item_to_neg_samp_id_dict: dict, side_info_dict: dict) ->dict:
+def get_neg_samp_id_side_info_dict(item_to_neg_samp_id_dict: dict, side_info_dict: dict) ->dict:
     """
         把 side info 的 dict {key -> item : value -> [side_info_list]}
     转化为 {key -> item id : value -> [side_info_list]}
@@ -63,7 +63,7 @@ def get_neg_samp_id_side_info(item_to_neg_samp_id_dict: dict, side_info_dict: di
             neg_samp_id_side_info_dict[id] = side_info_dict[item]
     return neg_samp_id_side_info_dict
 
-def get_side_info_tensor(neg_samp_id_side_info_dict: dict = load_dict(conf.get_string('neg_samp_id_side_info_work_path'))):
+def get_side_info_tensor(neg_samp_id_side_info_dict: dict = load_dict(conf.get_string('neg_samp_id_to_side_info_dict_path'))):
     """
         生成 item id 为索引的，索引下为 该 item 对应 side info 对应 id 的矢量 的 tensor
 
@@ -78,7 +78,7 @@ def get_side_info_tensor(neg_samp_id_side_info_dict: dict = load_dict(conf.get_s
     side_info_constant_tensor = tf.constant(const_list, dtype=tf.int64)
     return side_info_constant_tensor
 
-def get_side_info_mask(neg_samp_id_side_info_dict: dict = load_dict(conf.get_string('neg_samp_id_side_info_work_path'))):
+def get_side_info_mask(neg_samp_id_side_info_dict: dict = load_dict(conf.get_string('neg_samp_id_to_side_info_dict_path'))):
     """
         生成 item id 为索引的，索引下为 该 item 对应 side info 对应 id 的矢量 的 mask
 
@@ -109,8 +109,8 @@ if __name__ == '__main__':
     with open(conf.get_string('item_to_neg_samp_id_path'), 'rb') as handle:
         item_2_id_dict = pkl.load(handle)
 
-    neg_samp_id_side_info_dict = get_neg_samp_id_side_info(item_2_id_dict, side_info_dict)
-    with open(conf.get_string('neg_samp_id_side_info_work_path'), 'wb') as handle:
+    neg_samp_id_side_info_dict = get_neg_samp_id_side_info_dict(item_2_id_dict, side_info_dict)
+    with open(conf.get_string('neg_samp_id_to_side_info_dict_path'), 'wb') as handle:
         pkl.dump(neg_samp_id_side_info_dict, handle, protocol=pkl.HIGHEST_PROTOCOL)
 
     print("success.")
