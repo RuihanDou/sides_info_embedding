@@ -63,7 +63,7 @@ def get_neg_samp_id_side_info_dict(item_to_neg_samp_id_dict: dict, side_info_dic
             neg_samp_id_side_info_dict[id] = side_info_dict[item]
     return neg_samp_id_side_info_dict
 
-def get_side_info_tensor(neg_samp_id_side_info_dict: dict = load_dict(conf.get_string('neg_samp_id_to_side_info_dict_path'))):
+def get_side_info_tensor(neg_samp_id_side_info_dict: dict):
     """
         生成 item id 为索引的，索引下为 该 item 对应 side info 对应 id 的矢量 的 tensor
 

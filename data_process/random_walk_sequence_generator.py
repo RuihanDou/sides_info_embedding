@@ -3,7 +3,7 @@ from pyhocon import ConfigFactory
 import os
 conf = ConfigFactory.parse_file(os.path.join(os.path.dirname(__file__), '..', 'configure.conf'))
 os.chdir(conf.get_string('work_path'))
-from  asymmetrical_weighted_graph import AsymmetricalWeightedGraph
+from data_process.asymmetrical_weighted_graph import AsymmetricalWeightedGraph
 import pickle as pkl
 
 

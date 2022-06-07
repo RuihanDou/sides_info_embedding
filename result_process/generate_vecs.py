@@ -11,7 +11,7 @@ from utils.access_tool import *
 
 def extract_side_info_vectors(embedding_model: SideInfoEmbedding
                            , tokenizer: keras.preprocessing.text.Tokenizer
-                           , csv_path: str = conf.get_string('side_info_vec_csv_path ')
+                           , csv_path: str = conf.get_string('side_info_vec_csv_path')
                            , tag_dict_path: str = conf.get_string('side_info_tag_vec_dict_path')
                            , id_dict_path: str = conf.get_string('side_info_id_vec_dict_path')) -> pd.DataFrame:
     """
@@ -46,9 +46,9 @@ def extract_side_info_vectors(embedding_model: SideInfoEmbedding
     return df
 
 def extract_item_vectors(embedding_model: SideInfoEmbedding
-                         , item_id_side_info_dict: dict = load_dict(conf.get_string('neg_samp_id_side_info_work_path'))
+                         , item_id_side_info_dict: dict = load_dict(conf.get_string('neg_samp_id_to_side_info_dict_path'))
                          , id_to_item_dict: dict = load_dict(conf.get_string('neg_samp_id_to_item_path'))
-                         , csv_path: str = conf.get_string('item_vec_csv_path ')
+                         , csv_path: str = conf.get_string('item_vec_csv_path')
                          , item_dict_path: str = conf.get_string('item_vec_dict_path')
                          , id_dict_path: str = conf.get_string('item_id_vec_dict_path')) -> pd.DataFrame:
     """
