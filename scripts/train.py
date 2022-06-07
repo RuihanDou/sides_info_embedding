@@ -86,12 +86,17 @@ item_id_vec_dict_path = conf.get_string('item_id_vec_dict_path')
 
 
 
-def prepare_train():
-    """
-    第一步  side_info 预处理
 
-    读取 side info 的 csv 文件 存储 dict
+
+if __name__ == '__main__':
     """
+        数据准备
+        """
+    """
+        第一步  side_info 预处理
+
+        读取 side info 的 csv 文件 存储 dict
+        """
     side_info_dict = get_side_information_dict(side_info_path=side_infomation_path
                                                , tokenizer=load_tokenizer(tokenizer_path)
                                                , padding_max_size=side_info_max_num_tags
@@ -115,10 +120,11 @@ def prepare_train():
                                               , neg_samp_id_to_item_path=neg_samp_id_to_item_path)
     """
     第四步 把 side_info 关联上 处理完的图(经过random walk生成，item有了连续空间的id编码，图中 vertex 数量小于全量 item)
-    
+
     并 储存
     """
-    neg_samp_id_side_info_dict = get_neg_samp_id_side_info_dict(item_to_neg_samp_id_dict=load_dict(item_to_neg_samp_id_path), side_info_dict=side_info_dict)
+    neg_samp_id_side_info_dict = get_neg_samp_id_side_info_dict(
+        item_to_neg_samp_id_dict=load_dict(item_to_neg_samp_id_path), side_info_dict=side_info_dict)
     save_dict(neg_samp_id_to_side_info_dict_path, neg_samp_id_side_info_dict)
 
     """
@@ -127,20 +133,6 @@ def prepare_train():
     side_info_tensor = get_side_info_tensor(neg_samp_id_side_info_dict)
     side_info_mask = get_side_info_mask(neg_samp_id_side_info_dict)
 
-    """
-    返回预训练 数据准备元组
-    (随机游走对象, side info tensor, side info mask)
-    """
-
-    return random_walk, side_info_tensor, side_info_mask
-
-
-
-def train():
-    """
-    数据准备
-    """
-    random_walk, side_info_tensor, side_info_mask = prepare_train()
     """
     初始化模型
     """
@@ -161,15 +153,16 @@ def train():
     roc_auc = []
     insert_eval_epoch = 2
     for epoch in range(epochs):
-        print("epoch {%03d} begin")
+        print("epoch {0:03d} begin".format(epoch))
         random_walk.generate_epoch()
         dataset = generate_train_epoch_dataset(walk_sequence_path=walk_sequence_file_path,
-                                               item_to_id_dict=item_to_neg_samp_id_path, vertex_num=vertices_num,
+                                               item_to_id_dict=load_dict(item_to_neg_samp_id_path),
+                                               vertex_num=vertices_num,
                                                window_size=window_size, negative_sample_rate=negative_sample_rate,
                                                batch_size=batch_size, buffer_size=buffer_size)
         embedding_model.fit(dataset, epochs=1, callbacks=[tensorboard_callback])
         random_walk.clean_epoch()
-        print("epoch {%03d} finished.\n")
+        print("epoch {0:03d} finished.\n".format(epoch))
 
         """
         迭代内的监控，每两个epoch，计算一下新采样的序列skip-gram的pair 结果的AUC(PR 和 ROC)
@@ -178,9 +171,9 @@ def train():
             print("Insert an evaluation:")
             random_walk.generate_epoch()
             dataset = generate_train_epoch_dataset(walk_sequence_path=walk_sequence_file_path,
-                                               item_to_id_dict=item_to_neg_samp_id_path, vertex_num=vertices_num,
-                                               window_size=window_size, negative_sample_rate=negative_sample_rate,
-                                               batch_size=batch_size, buffer_size=buffer_size)
+                                                   item_to_id_dict=item_to_neg_samp_id_path, vertex_num=vertices_num,
+                                                   window_size=window_size, negative_sample_rate=negative_sample_rate,
+                                                   batch_size=batch_size, buffer_size=buffer_size)
             roc_m = tf.keras.metrics.AUC(curve='ROC')
             pr_m = tf.keras.metrics.AUC(curve='PR')
             for batch_pair, batch_label in dataset:
@@ -188,8 +181,10 @@ def train():
                 pr_m.update(batch_label, embedding_model(batch_pair))
                 roc_auc.append(roc_m.result().numpy())
                 pr_auc.append(pr_m.result().numpy())
-            print("Evaluation finish with AUC under *ROC*    {}    and  AUC under *PR*    {}   .".format(roc_m.result().numpy(), pr_m.result().numpy()))
+            print("Evaluation finish with AUC under *ROC*    {}    and  AUC under *PR*    {}   .".format(
+                roc_m.result().numpy(), pr_m.result().numpy()))
             random_walk.clean_epoch()
+            print("\n")
 
     """
     完成训练
@@ -205,11 +200,5 @@ def train():
                                    item_id_side_info_dict=load_dict(neg_samp_id_to_side_info_dict_path),
                                    id_to_item_dict=neg_samp_id_to_item_path, csv_path=item_vec_csv_path,
                                    item_dict_path=item_vec_dict_path, id_dict_path=item_id_vec_dict_path)
-
-
-
-
-if __name__ == '__main__':
-    train()
 
 

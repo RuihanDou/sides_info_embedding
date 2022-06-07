@@ -23,8 +23,9 @@ class SideInfoEmbedding(tf.keras.Model):
         self.side_info_embedding = tf.keras.layers.Embedding(self.side_info_size, self.embedding_dim, name=layer_name)
 
     def call(self, pair):
-        # targets.shape = (batch_size, ) , contexts.shape = (batch_size, )
+        # targets.shape = (batch_size,) , contexts.shape = (batch_size,)
         targets, contexts = pair
+        # # targets.shape = (batch_size,) , contexts.shape = (batch_size,)
         # targets_side_info_idx.shape = contexts_side_info_idx.shape =(batch_size, side_info_max_num_tags)
         targets_side_info_idx = tf.gather(params=self.side_info_indices_tensor, indices=targets)
         contexts_side_info_idx = tf.gather(params=self.side_info_indices_tensor, indices=contexts)
