@@ -11,9 +11,9 @@ from utils.access_tool import *
 
 def extract_side_info_vectors(embedding_model: SideInfoEmbedding
                            , tokenizer: keras.preprocessing.text.Tokenizer
-                           , csv_path: str = conf.get_string('side_info_vec_csv_path')
-                           , tag_dict_path: str = conf.get_string('side_info_tag_vec_dict_path')
-                           , id_dict_path: str = conf.get_string('side_info_id_vec_dict_path')) -> pd.DataFrame:
+                           , csv_path: str
+                           , tag_dict_path: str
+                           , id_dict_path: str) -> pd.DataFrame:
     """
     从训练完成的 模型中抽取出 side info 的 embedding矢量
     :param embedding_model: embedding 模型
@@ -46,11 +46,11 @@ def extract_side_info_vectors(embedding_model: SideInfoEmbedding
     return df
 
 def extract_item_vectors(embedding_model: SideInfoEmbedding
-                         , item_id_side_info_dict: dict = load_dict(conf.get_string('neg_samp_id_to_side_info_dict_path'))
-                         , id_to_item_dict: dict = load_dict(conf.get_string('neg_samp_id_to_item_path'))
-                         , csv_path: str = conf.get_string('item_vec_csv_path')
-                         , item_dict_path: str = conf.get_string('item_vec_dict_path')
-                         , id_dict_path: str = conf.get_string('item_id_vec_dict_path')) -> pd.DataFrame:
+                         , item_id_side_info_dict: dict
+                         , id_to_item_dict: dict
+                         , csv_path: str
+                         , item_dict_path: str
+                         , id_dict_path: str) -> pd.DataFrame:
     """
     从训练完成的 模型中抽取 side info 的矢量 组合成 item 的矢量
     :param embedding_model: embedding 模型

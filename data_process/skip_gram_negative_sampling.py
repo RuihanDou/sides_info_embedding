@@ -44,13 +44,12 @@ def generate_pairs_by_skip_gram(sequence: list
 
     return targets, contexts, target_context_labels
 
-def generate_train_epoch_dataset(walk_sequence_path: str = conf.get_string('walk_sequence_file_path')
-                                 , item_to_id_dict: dict = load_dict(conf.get_string('item_to_neg_samp_id_path'))
-                                 , vertex_num: int = conf.get_int('vertices_num')
-                                 , window_size: int = conf.get_int('window_size')
-                                 , negative_sample_rate:float = conf.get_float('negative_sample_rate')
-                                 , batch_size = conf.get_int('batch_size')
-                                 , buffer_size = conf.get_int('buffer_size')) -> tf.data.Dataset:
+def generate_train_epoch_dataset(walk_sequence_path: str = conf.get_string('walk_sequence_file_path'),
+                                item_to_id_dict: dict = {}, vertex_num: int = conf.get_int('vertices_num'),
+                                window_size: int = conf.get_int('window_size'),
+                                negative_sample_rate: float = conf.get_float('negative_sample_rate'),
+                                batch_size=conf.get_int('batch_size'),
+                                buffer_size=conf.get_int('buffer_size')) -> tf.data.Dataset:
     """
 
         本函数读入 一个epoch 的 随机游走序列 txt 文件 ，并转化为 ((target, context), label) 的 tf.Dataset文件
@@ -88,33 +87,4 @@ def generate_train_epoch_dataset(walk_sequence_path: str = conf.get_string('walk
     print("dataset ready")
     return dataset
 
-
-if __name__ == '__main__':
-
-    dataset = generate_train_epoch_dataset(batch_size=4, buffer_size=20)
-
-    for data in dataset.take(5):
-        print(data)
-
-    # item_to_id_dict = load_dict(conf.get_string('item_to_neg_samp_id_path'))
-    # id_to_item_dict = load_dict(conf.get_string('neg_samp_id_to_item_path'))
-    #
-    #
-    # lines = None
-    # with open(conf.get_string('walk_sequence_file_path'), 'r') as file:
-    #     lines = file.readlines()
-    # lines = [[item_to_id_dict[int(i)] for i in l.replace('\n', '').split('\t')] for l in lines]
-    #
-    # for line in tqdm(lines):
-    #     tar, con, lab = generate_pairs_by_skip_gram(line)
-    #
-    #     for id in tar:
-    #         if id not in id_to_item_dict:
-    #             print("{} wrong id.".format(id))
-    #
-    #     for id in con:
-    #         if id not in id_to_item_dict:
-    #             print("{} wrong id.".format(id))
-    #
-    # print("success")
 

@@ -12,12 +12,12 @@ class RandomWalkSequenceGenerator:
     使用 权重非对称图进行 随机游走，生成采样序列
     """
     def __init__(self, asymmerical_weighted_graph: AsymmetricalWeightedGraph
-                 , max_walk_seq_length: int = conf.get_int('max_walk_seq_length')
-                 , min_walk_seq_length: int = conf.get_int('min_walk_seq_length')
-                 , walk_sequence_file_path: str = conf.get_string('walk_sequence_file_path')
-                 , walk_end_probability: float = conf.get_float('walk_end_probability')
-                 , item_to_neg_samp_id_path: str = conf.get_string('item_to_neg_samp_id_path')
-                 , neg_samp_id_to_item_path: str = conf.get_string('neg_samp_id_to_item_path')):
+                 , max_walk_seq_length: int
+                 , min_walk_seq_length: int
+                 , walk_sequence_file_path: str
+                 , walk_end_probability: float
+                 , item_to_neg_samp_id_path: str
+                 , neg_samp_id_to_item_path: str):
         """
             该 class 的主要任务是对图进行随机游走生成序列，次要任务为生成 item 映射到 连续整数空间的 id 其中id的范围为
 

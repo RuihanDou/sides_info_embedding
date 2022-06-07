@@ -11,10 +11,10 @@ from utils.access_tool import *
 import tensorflow as tf
 
 
-def get_side_information_dict(side_info_path: str = conf.get_string('side_infomation_path')
-                              , tokenizer: keras.preprocessing.text.Tokenizer = load_tokenizer( conf.get_string('tokenizer_path'))
-                              , padding_max_size: int = conf.get_int('side_info_max_num_tags')
-                              , catagory_list: list = conf.get_list('side_info_category')) -> dict:
+def get_side_information_dict(side_info_path: str
+                              , tokenizer: keras.preprocessing.text.Tokenizer
+                              , padding_max_size: int
+                              , catagory_list: list) -> dict:
     """
         获取 embedding 使用的 side info
 

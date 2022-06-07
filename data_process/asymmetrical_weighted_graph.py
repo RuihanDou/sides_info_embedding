@@ -179,16 +179,6 @@ class AsymmetricalWeightedGraph:
         """
         return self._walk_map
 
-if __name__ == '__main__':
-    graph_file_path = conf.get_string('graph_file_path')
-    graph = AsymmetricalWeightedGraph(graph_file_path)
-    adj = graph.get_adj()
-    max_degree = 0
-    for map in adj.values():
-
-        max_degree = max(map.__len__(), max_degree)
-
-    print(max_degree)
 
 
 

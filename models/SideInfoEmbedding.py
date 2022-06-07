@@ -11,8 +11,8 @@ import tensorflow as tf
 class SideInfoEmbedding(tf.keras.Model):
     def __init__(self, side_info_size: int = conf.get_int('side_info_tag_size')
                  , embedding_dim: int = conf.get_int('embedding_dim')
-                 , side_info_indices_tensor=get_side_info_tensor()
-                 , side_info_indices_mask=get_side_info_mask()
+                 , side_info_indices_tensor=tf.constant([0])
+                 , side_info_indices_mask=tf.constant([0])
                  , layer_name: str = conf.get_string('layer_name')
                  ):
         super(SideInfoEmbedding, self).__init__()
@@ -43,12 +43,3 @@ class SideInfoEmbedding(tf.keras.Model):
         # dots.shape = (batch_size)
         dots = tf.einsum('be,be->b', targets_item_embedding, contexts_item_embedding)
         return dots
-
-if __name__ == '__main__':
-    dataset = generate_train_epoch_dataset(batch_size=16, buffer_size=200)
-    model = SideInfoEmbedding()
-    for pair, label in dataset.take(10):
-        predict = model(pair)
-        print(predict)
-        print(label)
-        print("\n")
