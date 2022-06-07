@@ -78,7 +78,7 @@ def get_side_info_tensor(neg_samp_id_side_info_dict: dict):
     side_info_constant_tensor = tf.constant(const_list, dtype=tf.int64)
     return side_info_constant_tensor
 
-def get_side_info_mask(neg_samp_id_side_info_dict: dict = load_dict(conf.get_string('neg_samp_id_to_side_info_dict_path'))):
+def get_side_info_mask(neg_samp_id_side_info_dict: dict):
     """
         生成 item id 为索引的，索引下为 该 item 对应 side info 对应 id 的矢量 的 mask
 
