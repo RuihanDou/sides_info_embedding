@@ -25,6 +25,8 @@ class SideInfoEmbedding(tf.keras.Model):
     def call(self, pair):
         # targets.shape = (batch_size,) , contexts.shape = (batch_size,)
         targets, contexts = pair
+        targets = tf.reshape(targets, [-1])
+        contexts = tf.reshape(contexts, [-1])
         # # targets.shape = (batch_size,) , contexts.shape = (batch_size,)
         # targets_side_info_idx.shape = contexts_side_info_idx.shape =(batch_size, side_info_max_num_tags)
         targets_side_info_idx = tf.gather(params=self.side_info_indices_tensor, indices=targets)
