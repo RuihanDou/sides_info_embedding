@@ -2,6 +2,8 @@ from pyhocon import ConfigFactory
 import os
 conf = ConfigFactory.parse_file(os.path.join(os.path.dirname(__file__), '..', 'configure.conf'))
 os.chdir(conf.get_string('work_path'))
+import sys
+sys.path.append(conf.get_string('work_path'))
 from utils.access_tool import *
 from utils.tokenizer_tool import *
 from data_process.side_information import *
@@ -160,6 +162,8 @@ if __name__ == '__main__':
                                                vertex_num=vertices_num,
                                                window_size=window_size, negative_sample_rate=negative_sample_rate,
                                                batch_size=batch_size, buffer_size=buffer_size)
+        AUTOTUNE = tf.data.AUTOTUNE
+        dataset = dataset.cache().prefetch(buffer_size=AUTOTUNE)
         embedding_model.fit(dataset, epochs=1, callbacks=[tensorboard_callback])
         random_walk.clean_epoch()
         print("epoch {0:03d} finished.\n".format(epoch))

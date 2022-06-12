@@ -2,7 +2,8 @@ from pyhocon import ConfigFactory
 import os
 conf = ConfigFactory.parse_file(os.path.join(os.path.dirname(__file__), '..', 'configure.conf'))
 os.chdir(conf.get_string('work_path'))
-
+import sys
+sys.path.append(conf.get_string('work_path'))
 from data_process.side_information import get_side_info_tensor, get_side_info_mask
 from data_process.skip_gram_negative_sampling import *
 import tensorflow as tf
