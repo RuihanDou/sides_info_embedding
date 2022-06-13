@@ -4,8 +4,10 @@ conf = ConfigFactory.parse_file(os.path.join(os.path.dirname(__file__), '..', 'c
 os.chdir(conf.get_string('work_path'))
 import sys
 sys.path.append(conf.get_string('work_path'))
-from pyspark.sql import *
 sequence_category = conf.get_string('sequence_category')
+import pandas as pd
+from tqdm import tqdm
+
 
 def sequences_dataframe_to_graph_pair_file(sequences_path: str
                                            , graph_file_path: str):
@@ -15,16 +17,15 @@ def sequences_dataframe_to_graph_pair_file(sequences_path: str
     :param graph_file_path:   存储的带权图 txt 文件路径
     :return:
     """
-    spark = SparkSession.builder.master('local').appName("side_information") \
-        .config('spark.excecutor.memory', conf.get_string('excecutor_memory')) \
-        .config('spark.driver.memory', conf.get_string('driver_memory')) \
-        .config('spark.driver.maxResultSize', conf.get_string('max_result_size')) \
-        .getOrCreate()
-    df = spark.read.options(header='True', inferSchema='True').csv(sequences_path).select(sequence_category)
+    print("load basic sequence file from csv file.")
+    df = pd.read_csv(sequences_path)
+    # sequence_series 是 pandas.core.series.Series 类型的数据，不能支持用 .iterrows() 遍历可以
+    # sequence_series 支持直接遍历
+    sequence_series = df[sequence_category]
     graph_dict = {}
     items_set = set()
-    for row in df.collect():
-        items = [int(item) for item in str(row[sequence_category]).split('\t')]
+    for seq in tqdm(sequence_series):
+        items = [int(item) for item in str(seq).split('\t')]
         # 序列长度为 1 无法构建图
         if len(items) <= 1:
             continue
@@ -44,7 +45,6 @@ def sequences_dataframe_to_graph_pair_file(sequences_path: str
                 graph_dict[pair] += 1
             else:
                 graph_dict[pair] = 1
-    spark.stop()
     vertex_edge_formation = "{} {}\n"
     graph_file_line_formation = "{} {} {}\n"
     with open(graph_file_path, 'w') as file:
@@ -55,19 +55,9 @@ def sequences_dataframe_to_graph_pair_file(sequences_path: str
 
 
 
+
+
+
 if __name__ == '__main__':
-
-    sequences_dataframe_to_graph_pair_file()
-
-    # spark = SparkSession.builder.master('local').appName("side_information") \
-    #     .config('spark.excecutor.memory', conf.get_string('excecutor_memory')) \
-    #     .config('spark.driver.memory', conf.get_string('driver_memory')) \
-    #     .config('spark.driver.maxResultSize', conf.get_string('max_result_size')) \
-    #     .getOrCreate()
-    # df = spark.read.options(header='True', inferSchema='True').csv(conf.get_string('sequences_path')).select(sequence_category)
-    # for row in df.collect():
-    #     items = [int(item) for item in str(row[sequence_category]).split('\t')]
-    #     if len(items) :
-    #         print(items)
-    #         break
-    # spark.stop()
+    sequences_dataframe_to_graph_pair_file(sequences_path=conf.get_string('sequences_path'),
+                                           graph_file_path=conf.get_string('graph_file_path'))

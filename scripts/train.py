@@ -6,9 +6,9 @@ import sys
 sys.path.append(conf.get_string('work_path'))
 from utils.access_tool import *
 from utils.tokenizer_tool import *
-from data_process.side_information import *
+from data_process.side_information_pd import *
 from data_process.asymmetrical_weighted_graph import AsymmetricalWeightedGraph
-from data_process.graph_file import sequences_dataframe_to_graph_pair_file
+from data_process.graph_file_pd import sequences_dataframe_to_graph_pair_file
 from data_process.random_walk_sequence_generator import RandomWalkSequenceGenerator
 from data_process.skip_gram_negative_sampling import generate_train_epoch_dataset
 from models.SideInfoEmbedding import SideInfoEmbedding
@@ -142,11 +142,14 @@ if __name__ == '__main__':
                                         side_info_indices_tensor=side_info_tensor,
                                         side_info_indices_mask=side_info_mask, layer_name=layer_name)
 
-    embedding_model.compile(optimizer='adam', loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
-                            metrics=['accuracy'])
+    embedding_model.compile(optimizer='adam', loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+                            metrics=[tf.keras.metrics.Recall(thresholds=0.5)])
 
     # 由于初步观察，只需要tensorboard一种call_back
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=callbacks_log)
+    checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(callbacks_log, save_best_only=False)
+    earlystop_callback = tf.keras.callbacks.EarlyStopping(patience=5, min_delta=1e-3)
+    callbacks = tf.keras.callbacks.CallbackList([tensorboard_callback, checkpoint_callback, earlystop_callback])
 
     """
     训练开始，生成游走序列，并且skip-gram生成dataset，进行一次fit
@@ -154,8 +157,13 @@ if __name__ == '__main__':
     pr_auc = []
     roc_auc = []
     insert_eval_epoch = 2
+    logs = {}
+    # callbacks.on_train_begin(logs=logs)
+    # loss_function = tf.keras.losses.BinaryFocalCrossentropy(gamma=2.0, from_logits=True)
+    # train_metrics = tf.keras.metrics.Recall(thresholds=0.5)
     for epoch in range(epochs):
         print("epoch {0:03d} begin".format(epoch))
+        # callbacks.on_epoch_begin(epoch)
         random_walk.generate_epoch()
         dataset = generate_train_epoch_dataset(walk_sequence_path=walk_sequence_file_path,
                                                item_to_id_dict=load_dict(item_to_neg_samp_id_path),
@@ -164,7 +172,10 @@ if __name__ == '__main__':
                                                batch_size=batch_size, buffer_size=buffer_size)
         AUTOTUNE = tf.data.AUTOTUNE
         dataset = dataset.cache().prefetch(buffer_size=AUTOTUNE)
-        embedding_model.fit(dataset, epochs=1, callbacks=[tensorboard_callback])
+        # for i, ((t, c), l) in dataset.enumerate():
+        #     batch_log = embedding_model.train_step(((t,c), l))
+        # 因为直接调用 model.fit dataset 有问题，所以
+        embedding_model.fit(dataset, epochs=1, callbacks=[tensorboard_callback, checkpoint_callback, earlystop_callback])
         random_walk.clean_epoch()
         print("epoch {0:03d} finished.\n".format(epoch))
 

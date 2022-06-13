@@ -4,7 +4,7 @@ conf = ConfigFactory.parse_file(os.path.join(os.path.dirname(__file__), '..', 'c
 os.chdir(conf.get_string('work_path'))
 import sys
 sys.path.append(conf.get_string('work_path'))
-from data_process.side_information import get_side_info_tensor, get_side_info_mask
+from data_process.side_information_pd import get_side_info_tensor, get_side_info_mask
 from data_process.skip_gram_negative_sampling import *
 import tensorflow as tf
 
@@ -24,26 +24,25 @@ class SideInfoEmbedding(tf.keras.Model):
         self.side_info_embedding = tf.keras.layers.Embedding(self.side_info_size, self.embedding_dim, name=layer_name)
 
     def call(self, pair):
-        # targets.shape = (batch_size,) , contexts.shape = (batch_size,)
+        # targets.shape = (batch_size, 1) , contexts.shape = (batch_size, 1)
         targets, contexts = pair
-        targets = tf.reshape(targets, [-1])
-        contexts = tf.reshape(contexts, [-1])
-        # # targets.shape = (batch_size,) , contexts.shape = (batch_size,)
-        # targets_side_info_idx.shape = contexts_side_info_idx.shape =(batch_size, side_info_max_num_tags)
+        # # targets.shape = (batch_size, 1) , contexts.shape = (batch_size, 1)
+        # targets_side_info_idx.shape = contexts_side_info_idx.shape =(batch_size, 1, side_info_max_num_tags)
         targets_side_info_idx = tf.gather(params=self.side_info_indices_tensor, indices=targets)
         contexts_side_info_idx = tf.gather(params=self.side_info_indices_tensor, indices=contexts)
-        # targets_side_info_mask.shape = contexts_side_info_mask.shape =(batch_size, side_info_max_num_tags)
+        # targets_side_info_mask.shape = contexts_side_info_mask.shape =(batch_size, 1, side_info_max_num_tags)
         targets_side_info_mask = tf.gather(params=self.side_info_indices_mask, indices=targets)
         contexts_side_info_mask = tf.gather(params=self.side_info_indices_mask, indices=contexts)
-        # targets_embedding.shape = contexts_embedding.shape = (batch_size, side_info_max_num_tags, embedding_dim)
+        # targets_embedding.shape = contexts_embedding.shape = (batch_size, 1, side_info_max_num_tags, embedding_dim)
         targets_embedding = self.side_info_embedding(targets_side_info_idx)
         contexts_embedding = self.side_info_embedding(contexts_side_info_idx)
-        # masked_targets_embedding.shape = masked_contexts_embedding.shape = (batch_size, side_info_max_num_tags, embedding_dim)
-        masked_targets_embedding = tf.einsum('bxy,bx->bxy', targets_embedding, targets_side_info_mask)
-        masked_contexts_embedding = tf.einsum('bxy,bx->bxy', contexts_embedding, contexts_side_info_mask)
-        # targets_item_embedding.shape = contexts_item_embedding.shape = (batch_size, embedding_dim)
-        targets_item_embedding = tf.math.reduce_sum(masked_targets_embedding, 1)
-        contexts_item_embedding = tf.math.reduce_sum(masked_contexts_embedding, 1)
-        # dots.shape = (batch_size)
-        dots = tf.einsum('be,be->b', targets_item_embedding, contexts_item_embedding)
+        # masked_targets_embedding.shape = masked_contexts_embedding.shape = (batch_size, 1, side_info_max_num_tags, embedding_dim)
+        # b = batch_size l = 1, t = side_info_max_num_tags, e = mbedding_dim
+        masked_targets_embedding = tf.einsum('blte,blt->blte', targets_embedding, targets_side_info_mask)
+        masked_contexts_embedding = tf.einsum('blte,blt->blte', contexts_embedding, contexts_side_info_mask)
+        # targets_item_embedding.shape = contexts_item_embedding.shape = (batch_size, 1, embedding_dim)
+        targets_item_embedding = tf.math.reduce_sum(masked_targets_embedding, 2)
+        contexts_item_embedding = tf.math.reduce_sum(masked_contexts_embedding, 2)
+        # dots.shape = (batch_size, 1)
+        dots = tf.einsum('ble,ble->bl', targets_item_embedding, contexts_item_embedding)
         return dots
