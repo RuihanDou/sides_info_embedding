@@ -93,36 +93,5 @@ def generate_train_epoch_dataset(walk_sequence_path: str = conf.get_string('walk
     print("dataset ready")
     return dataset
 
-def generate_train_epoch_x_y(walk_sequence_path: str = conf.get_string('walk_sequence_file_path'),
-                                item_to_id_dict: dict = {}, vertex_num: int = conf.get_int('vertices_num'),
-                                window_size: int = conf.get_int('window_size'),
-                                negative_sample_rate: float = conf.get_float('negative_sample_rate'),
-                                batch_size=conf.get_int('batch_size'), buffer_size=conf.get_int('buffer_size')):
-    lines = None
-    with open(walk_sequence_path, 'r') as file:
-        lines = file.readlines()
-    lines = [[item_to_id_dict[int(i)] for i in l.replace('\n', '').split('\t')] for l in lines]
-
-    print("Generate targets, contexts and labels for an epoch.")
-    targets_data = []
-    contexts_data = []
-    labels_data = []
-    for line in tqdm(lines):
-        targets, contexts, labels = generate_pairs_by_skip_gram(line, vertex_num, window_size, negative_sample_rate)
-        targets_data.extend(targets)
-        contexts_data.extend(contexts)
-        labels_data.extend(labels)
-    print("Package targets, context and labels to dataset.")
-    targets_data = np.array(targets_data)
-    contexts_data = np.array(contexts_data)
-    labels_data = np.array(labels_data)
-    dataset = tf.data.Dataset.from_tensor_slices(((targets_data, contexts_data), labels_data))
-    dataset = dataset.shuffle(buffer_size).batch(batch_size, drop_remainder=True)
-    x = []
-    y = []
-    for (t,c), l in dataset:
-        x.append((t,c))
-        y.append(l)
-    return x, y
 
 
