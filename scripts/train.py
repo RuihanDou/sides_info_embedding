@@ -1,6 +1,6 @@
 from pyhocon import ConfigFactory
 import os
-conf = ConfigFactory.parse_file(os.path.join(os.path.dirname(__file__), '..', 'configure.conf'))
+conf = ConfigFactory.parse_file(os.path.join(os.path.dirname(__file__), '..', 'config.conf'))
 os.chdir(conf.get_string('work_path'))
 import sys
 sys.path.append(conf.get_string('work_path'))
@@ -162,6 +162,8 @@ if __name__ == '__main__':
     # callbacks.on_train_begin(logs=logs)
     # loss_function = tf.keras.losses.BinaryFocalCrossentropy(gamma=2.0, from_logits=True)
     # train_metrics = tf.keras.metrics.Recall(thresholds=0.5)
+    roc_m = tf.keras.metrics.AUC(curve='ROC')
+    pr_m = tf.keras.metrics.AUC(curve='PR')
     for epoch in range(epochs):
         print("epoch {0:03d} begin".format(epoch))
         callbacks.on_epoch_begin(epoch)
@@ -192,20 +194,21 @@ if __name__ == '__main__':
         迭代内的监控，每两个epoch，计算一下新采样的序列skip-gram的pair 结果的AUC(PR 和 ROC)
         """
         if epoch % insert_eval_epoch == 0:
-            roc_m = tf.keras.metrics.AUC(curve='ROC')
-            pr_m = tf.keras.metrics.AUC(curve='PR')
+            roc_m.reset_state()
+            pr_m.reset_state()
             print("Insert an evaluation:")
             random_walk.generate_epoch()
             dataset = generate_train_epoch_dataset(walk_sequence_path=walk_sequence_file_path,
-                                                   item_to_id_dict=item_to_neg_samp_id_path, vertex_num=vertices_num,
+                                                   item_to_id_dict=load_dict(item_to_neg_samp_id_path),
+                                                   vertex_num=vertices_num,
                                                    window_size=window_size, negative_sample_rate=negative_sample_rate,
                                                    batch_size=batch_size, buffer_size=buffer_size)
             # for batch_pair, batch_label in tqdm(dataset):
             for batch_pair, batch_label in tqdm(dataset.take(200)): # TODO 调试成功后切换
                 groud_truth = tf.squeeze(batch_label)
-                prediction = tf.squeeze(embedding_model(batch_pair))
-                roc_m.update(groud_truth, prediction)
-                pr_m.update(groud_truth, prediction)
+                prediction = tf.clip_by_value(tf.squeeze(embedding_model(batch_pair)), 0.0, 1.0)
+                roc_m.update_state(groud_truth, prediction)
+                pr_m.update_state(groud_truth, prediction)
                 # roc_auc.append(roc_m.result().numpy())
                 # pr_auc.append(pr_m.result().numpy())
             print("Evaluation finish with AUC under *ROC*    {}    and  AUC under *PR*    {}   .".format(

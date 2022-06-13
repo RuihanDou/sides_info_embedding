@@ -2,7 +2,7 @@ import random
 
 from pyhocon import ConfigFactory
 import os
-conf = ConfigFactory.parse_file(os.path.join(os.path.dirname(__file__), '..', 'configure.conf'))
+conf = ConfigFactory.parse_file(os.path.join(os.path.dirname(__file__), '..', 'config.conf'))
 os.chdir(conf.get_string('work_path'))
 import sys
 sys.path.append(conf.get_string('work_path'))
@@ -70,21 +70,21 @@ def generate_train_epoch_dataset(walk_sequence_path: str = conf.get_string('walk
     lines = None
     with open(walk_sequence_path, 'r') as file:
         lines = file.readlines()
-    # lines = [[item_to_id_dict[int(i)] for i in line.replace('\n', '').split('\t')] for line in lines]
+    lines = [[item_to_id_dict[int(i)] for i in line.replace('\n', '').split('\t')] for line in lines]
     format_lines = []
-    for line in lines:
-        print(line)
-        line_list = line.replace('\n', '').split('\t')
-        format_line = []
-        if len(line_list) > 2:
-            for token in line_list:
-                print(token)
-                print(int(token))
-                if int(token) in item_to_id_dict:
-                    format_line.append(item_to_id_dict[int(token)])
-        if len(format_line) > 2:
-            format_lines.append(format_line)
-    lines = format_lines
+    # for line in lines:
+    #     print(line)
+    #     line_list = line.replace('\n', '').split('\t')
+    #     format_line = []
+    #     if len(line_list) > 2:
+    #         for token in line_list:
+    #             print(token)
+    #             print(int(token))
+    #             if int(token) in item_to_id_dict:
+    #                 format_line.append(item_to_id_dict[int(token)])
+    #     if len(format_line) > 2:
+    #         format_lines.append(format_line)
+    # lines = format_lines
 
     print("Generate targets, contexts and labels for an epoch.")
     targets_data = []
