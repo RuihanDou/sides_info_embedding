@@ -143,19 +143,22 @@ if __name__ == '__main__':
                                         side_info_indices_mask=side_info_mask, layer_name=layer_name)
 
     embedding_model.compile(optimizer='adam', loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
-                            metrics=[tf.keras.metrics.Recall(thresholds=0.5)])
+                            metrics='accuracy')
 
     # 由于初步观察，只需要tensorboard一种call_back
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=callbacks_log)
     checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(callbacks_log, save_best_only=False)
-    earlystop_callback = tf.keras.callbacks.EarlyStopping(patience=5, min_delta=1e-3)
-    callbacks = tf.keras.callbacks.CallbackList([tensorboard_callback, checkpoint_callback, earlystop_callback])
+    # earlystop_callback = tf.keras.callbacks.EarlyStopping(patience=5, min_delta=1e-3)
 
+    callbacks = tf.keras.callbacks.CallbackList([tensorboard_callback, checkpoint_callback])
+    # callbacks = tf.keras.callbacks.CallbackList([tensorboard_callback, checkpoint_callback, earlystop_callback])
     """
     训练开始，生成游走序列，并且skip-gram生成dataset，进行一次fit
     """
-    pr_auc = []
-    roc_auc = []
+    # pr_auc = []
+    # roc_auc = []
+    roc_m = tf.keras.metrics.AUC(curve='ROC')
+    pr_m = tf.keras.metrics.AUC(curve='PR')
     insert_eval_epoch = 2
     logs = {}
     # callbacks.on_train_begin(logs=logs)
@@ -163,48 +166,73 @@ if __name__ == '__main__':
     # train_metrics = tf.keras.metrics.Recall(thresholds=0.5)
     for epoch in range(epochs):
         print("epoch {0:03d} begin".format(epoch))
-        # callbacks.on_epoch_begin(epoch)
+        callbacks.on_epoch_begin(epoch)
         random_walk.generate_epoch()
         dataset = generate_train_epoch_dataset(walk_sequence_path=walk_sequence_file_path,
                                                item_to_id_dict=load_dict(item_to_neg_samp_id_path),
                                                vertex_num=vertices_num,
                                                window_size=window_size, negative_sample_rate=negative_sample_rate,
                                                batch_size=batch_size, buffer_size=buffer_size)
-        AUTOTUNE = tf.data.AUTOTUNE
-        dataset = dataset.cache().prefetch(buffer_size=AUTOTUNE)
-        # for i, ((t, c), l) in dataset.enumerate():
-        #     batch_log = embedding_model.train_step(((t,c), l))
-        # 因为直接调用 model.fit dataset 有问题，所以
-        embedding_model.fit(dataset, epochs=1, callbacks=[tensorboard_callback, checkpoint_callback, earlystop_callback])
+        # AUTOTUNE = tf.data.AUTOTUNE
+        # dataset = dataset.cache().prefetch(buffer_size=AUTOTUNE)
+        # loss_accumulation 和 accurate_accumulation
+        loss_accumulation = []
+        accurate_accumulation = []
+        for i, ((t, c), l) in tqdm(dataset.enumerate()):
+            callbacks.on_train_batch_begin(i)
+            batch_logs = embedding_model.train_step(((t,c), l))
+            # {'loss': <tf.Tensor: shape=(), dtype=float32, numpy=1.3398242>, 'accuracy': <tf.Tensor: shape=(), dtype=float32, numpy=0.53125>}
+            callbacks.on_train_batch_end(i, batch_logs)
+        # 因为希望能够控制 每个epoch使用不同的随机游走序列训练，所以不使用.fit()
+        # embedding_model.fit(dataset, epochs=1, callbacks=[tensorboard_callback, checkpoint_callback, earlystop_callback])
         random_walk.clean_epoch()
-        print("epoch {0:03d} finished.\n".format(epoch))
+
 
         """
         迭代内的监控，每两个epoch，计算一下新采样的序列skip-gram的pair 结果的AUC(PR 和 ROC)
         """
         if epoch % insert_eval_epoch == 0:
+            roc_m.reset_state()
+            pr_m.reset_state()
             print("Insert an evaluation:")
             random_walk.generate_epoch()
             dataset = generate_train_epoch_dataset(walk_sequence_path=walk_sequence_file_path,
                                                    item_to_id_dict=item_to_neg_samp_id_path, vertex_num=vertices_num,
                                                    window_size=window_size, negative_sample_rate=negative_sample_rate,
                                                    batch_size=batch_size, buffer_size=buffer_size)
-            roc_m = tf.keras.metrics.AUC(curve='ROC')
-            pr_m = tf.keras.metrics.AUC(curve='PR')
-            for batch_pair, batch_label in dataset:
-                roc_m.update(batch_label, embedding_model(batch_pair))
-                pr_m.update(batch_label, embedding_model(batch_pair))
-                roc_auc.append(roc_m.result().numpy())
-                pr_auc.append(pr_m.result().numpy())
+            for batch_pair, batch_label in tqdm(dataset):
+                groud_truth = tf.squeeze(batch_label)
+                prediction = tf.squeeze(embedding_model(batch_pair))
+                roc_m.update(groud_truth, prediction)
+                pr_m.update(groud_truth, prediction)
+                # roc_auc.append(roc_m.result().numpy())
+                # pr_auc.append(pr_m.result().numpy())
             print("Evaluation finish with AUC under *ROC*    {}    and  AUC under *PR*    {}   .".format(
                 roc_m.result().numpy(), pr_m.result().numpy()))
             random_walk.clean_epoch()
-            print("\n")
+        # 汇总本 epoch 的 accuracy 和 loss 进展
+        accuracy = tf.math.reduce_mean(tf.concat(accurate_accumulation, axis=0))
+        loss = tf.math.reduce_mean(tf.concat(loss_accumulation, axis=0))
+        epoch_log = {
+            'loss': loss,
+            'accuracy': accuracy,
+            'pr_auc': pr_m.result(),
+            'roc_auc': roc_m.result()
+        }
+        callbacks.on_epoch_end(epoch, epoch_log)
+        print(
+            "epoch {0:03d} finished. \n epoch summary: avg_loss: {} ,  avg_accuracy: {} ,  pr_auc: {} ,  roc_auc: {}\n".format(
+                epoch,
+                loss,
+                accuracy,
+                pr_m.result().numpy(),
+                roc_m.result().numpy()))
+
 
     """
     完成训练
     """
-    plot_auc_trend(roc_auc=roc_auc, pr_auc=pr_auc, insert_eval_epoch=insert_eval_epoch)
+    # plot_auc_trend(roc_auc=roc_auc, pr_auc=pr_auc, insert_eval_epoch=insert_eval_epoch)
     """
     存储参数
     """
