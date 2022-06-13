@@ -70,18 +70,21 @@ def generate_train_epoch_dataset(walk_sequence_path: str = conf.get_string('walk
     lines = None
     with open(walk_sequence_path, 'r') as file:
         lines = file.readlines()
-    lines = [[item_to_id_dict[int(i)] for i in line.replace('\n', '').split('\t')] for line in lines]
-    # format_lines = []
-    # for line in lines:
-    #     line_list = line.replace('\n', '').split('\t')
-    #     format_line = []
-    #     if len(line_list) > 1:
-    #         for token in line_list:
-    #             if int(token) in item_to_id_dict:
-    #                 format_line.append(item_to_id_dict[int(token)])
-    #     if len(format_line) > 1:
-    #         format_lines.append(format_line)
-    # lines = format_lines
+    # lines = [[item_to_id_dict[int(i)] for i in line.replace('\n', '').split('\t')] for line in lines]
+    format_lines = []
+    for line in lines:
+        print(line)
+        line_list = line.replace('\n', '').split('\t')
+        format_line = []
+        if len(line_list) > 2:
+            for token in line_list:
+                print(token)
+                print(int(token))
+                if int(token) in item_to_id_dict:
+                    format_line.append(item_to_id_dict[int(token)])
+        if len(format_line) > 2:
+            format_lines.append(format_line)
+    lines = format_lines
 
     print("Generate targets, contexts and labels for an epoch.")
     targets_data = []
