@@ -63,7 +63,7 @@ def extract_item_vectors(embedding_model: SideInfoEmbedding
     :param id_dict_path: item 的 id -> vec 的 dict 存储路径
     :return: 本函数返回 pd.DataFrame
     """
-    embedding_arrays = embedding_model.get_layer(embedding_model.layer_name).get_weights()[0]
+    embedding_arrays = embedding_model.get_layer(conf.get_string('layer_name')).get_weights()[0]
     items = []
     ids = []
     vecs = []

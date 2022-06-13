@@ -85,12 +85,30 @@ item_vec_dict_path = conf.get_string('item_vec_dict_path')
 item_id_vec_dict_path = conf.get_string('item_id_vec_dict_path')
 
 
+# 数据路径
+data_path = conf.get_string('data_path')
 
+# 日志路径
+log_path = conf.get_string('log_path')
+
+# 结果路径
+rst_path = conf.get_string('rst_path')
 
 
 
 
 if __name__ == '__main__':
+    """
+    创建训练需要文件夹
+    """
+    if not os.path.exists(data_path):
+        os.mkdir(data_path)
+
+    if not os.path.exists(log_path):
+        os.mkdir(log_path)
+
+    if not os.path.exists(rst_path):
+        os.mkdir(rst_path)
     """
         数据准备
         """
@@ -147,10 +165,10 @@ if __name__ == '__main__':
 
     # 由于初步观察，只需要tensorboard一种call_back
     # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=callbacks_log)
-    checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(callbacks_log, save_best_only=False)
+    # checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(callbacks_log, save_best_only=False)
     # earlystop_callback = tf.keras.callbacks.EarlyStopping(patience=5, min_delta=1e-3)
 
-    callbacks = tf.keras.callbacks.CallbackList([checkpoint_callback])
+    # callbacks = tf.keras.callbacks.CallbackList([checkpoint_callback])
     # callbacks = tf.keras.callbacks.CallbackList([tensorboard_callback, checkpoint_callback, earlystop_callback])
     """
     训练开始，生成游走序列，并且skip-gram生成dataset，进行一次fit
@@ -166,7 +184,7 @@ if __name__ == '__main__':
     pr_m = tf.keras.metrics.AUC(curve='PR')
     for epoch in range(epochs):
         print("epoch {0:03d} begin".format(epoch))
-        callbacks.on_epoch_begin(epoch)
+        # callbacks.on_epoch_begin(epoch)
         random_walk.generate_epoch()
         dataset = generate_train_epoch_dataset(walk_sequence_path=walk_sequence_file_path,
                                                item_to_id_dict=load_dict(item_to_neg_samp_id_path),
@@ -181,10 +199,12 @@ if __name__ == '__main__':
         print("model fit on dataset:")
         for i, ((t, c), l) in tqdm(dataset.take(1000).enumerate()): # TODO:调试成功后切换
         # for i, ((t, c), l) in tqdm(dataset.enumerate()):
-            callbacks.on_train_batch_begin(i)
+        #     callbacks.on_train_batch_begin(i)
             batch_logs = embedding_model.train_step(((t,c), l))
             # {'loss': <tf.Tensor: shape=(), dtype=float32, numpy=1.3398242>, 'accuracy': <tf.Tensor: shape=(), dtype=float32, numpy=0.53125>}
-            callbacks.on_train_batch_end(i, batch_logs)
+            loss_accumulation.append(batch_logs['loss'])
+            accurate_accumulation.append(batch_logs['accuracy'])
+            # callbacks.on_train_batch_end(i, batch_logs)
         # 因为希望能够控制 每个epoch使用不同的随机游走序列训练，所以不使用.fit()
         # embedding_model.fit(dataset, epochs=1, callbacks=[tensorboard_callback, checkpoint_callback, earlystop_callback])
         random_walk.clean_epoch()
@@ -223,14 +243,17 @@ if __name__ == '__main__':
             'pr_auc': pr_m.result(),
             'roc_auc': roc_m.result()
         }
-        callbacks.on_epoch_end(epoch, epoch_log)
-        print(
-            "epoch {0:03d} finished. \n epoch summary: avg_loss: {} ,  avg_accuracy: {} ,  pr_auc: {} ,  roc_auc: {}\n".format(
-                epoch,
-                loss,
-                accuracy,
-                pr_m.result().numpy(),
-                roc_m.result().numpy()))
+        # callbacks.on_epoch_end(epoch, epoch_log)
+        print("epoch {0:03d} finished.".format(epoch))
+
+        print("epoch summary: avg_loss: {} ,  avg_accuracy: {} ,  pr_auc: {} ,  roc_auc: {}\n".format(
+            loss.numpy(),
+            accuracy.numpy(),
+            pr_m.result().numpy(),
+            roc_m.result().numpy()
+        ))
+        print("\n")
+        print("\n")
 
 
     """
