@@ -116,7 +116,7 @@ class RandomWalkSequenceGenerator:
                 if count % 10000 == 0:
                     print(str(round(visited.__len__() / self.items_num * 100, 2)) + "% ready")
                 # TODO ：调试用，调试成功后取消
-                if count == 30000:
+                if count == 10000:
                     break
                 # TODO ：调试用，调试成功后取消
                 seq_start = -1
