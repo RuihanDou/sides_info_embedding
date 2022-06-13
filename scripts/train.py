@@ -146,11 +146,11 @@ if __name__ == '__main__':
                             metrics='accuracy')
 
     # 由于初步观察，只需要tensorboard一种call_back
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=callbacks_log)
+    # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=callbacks_log)
     checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(callbacks_log, save_best_only=False)
     # earlystop_callback = tf.keras.callbacks.EarlyStopping(patience=5, min_delta=1e-3)
 
-    callbacks = tf.keras.callbacks.CallbackList([tensorboard_callback, checkpoint_callback])
+    callbacks = tf.keras.callbacks.CallbackList([checkpoint_callback])
     # callbacks = tf.keras.callbacks.CallbackList([tensorboard_callback, checkpoint_callback, earlystop_callback])
     """
     训练开始，生成游走序列，并且skip-gram生成dataset，进行一次fit
