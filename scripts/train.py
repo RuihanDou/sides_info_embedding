@@ -268,7 +268,7 @@ if __name__ == '__main__':
                                              id_dict_path=side_info_id_vec_dict_path)
     item_df = extract_item_vectors(embedding_model=embedding_model,
                                    item_id_side_info_dict=load_dict(neg_samp_id_to_side_info_dict_path),
-                                   id_to_item_dict=neg_samp_id_to_item_path, csv_path=item_vec_csv_path,
+                                   id_to_item_dict=load_dict(neg_samp_id_to_item_path), csv_path=item_vec_csv_path,
                                    item_dict_path=item_vec_dict_path, id_dict_path=item_id_vec_dict_path)
 
 
