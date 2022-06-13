@@ -177,8 +177,8 @@ if __name__ == '__main__':
         loss_accumulation = []
         accurate_accumulation = []
         print("model fit on dataset:")
-        for i, ((t, c), l) in tqdm(dataset.take(1000).enumerate()): # TODO:调试成功后切换
-        # for i, ((t, c), l) in tqdm(dataset.enumerate()):
+        # for i, ((t, c), l) in tqdm(dataset.take(1000).enumerate()): # TODO:调试成功后切换
+        for i, ((t, c), l) in tqdm(dataset.enumerate()):
             callbacks.on_train_batch_begin(i)
             batch_logs = embedding_model.train_step(((t,c), l))
             # {'loss': <tf.Tensor: shape=(), dtype=float32, numpy=1.3398242>, 'accuracy': <tf.Tensor: shape=(), dtype=float32, numpy=0.53125>}
@@ -200,8 +200,8 @@ if __name__ == '__main__':
                                                    item_to_id_dict=item_to_neg_samp_id_path, vertex_num=vertices_num,
                                                    window_size=window_size, negative_sample_rate=negative_sample_rate,
                                                    batch_size=batch_size, buffer_size=buffer_size)
-            # for batch_pair, batch_label in tqdm(dataset):
-            for batch_pair, batch_label in tqdm(dataset.take(200)): # TODO 调试成功后切换
+            for batch_pair, batch_label in tqdm(dataset):
+            # for batch_pair, batch_label in tqdm(dataset.take(200)): # TODO 调试成功后切换
                 groud_truth = tf.squeeze(batch_label)
                 prediction = tf.squeeze(embedding_model(batch_pair))
                 roc_m.update(groud_truth, prediction)
