@@ -252,8 +252,25 @@ if __name__ == '__main__':
             roc_m.result().numpy()
         ))
 
-        print("epoch {0:03d} finished.".format(epoch))
+        print("epoch save.")
 
+        """
+            存储参数
+            """
+        side_info_df = extract_side_info_vectors(embedding_model=embedding_model,
+                                                 tokenizer=load_tokenizer(tokenizer_path),
+                                                 csv_path=side_info_vec_csv_path.format(cur_time, epoch),
+                                                 tag_dict_path=side_info_tag_vec_dict_path.format(cur_time, epoch),
+                                                 id_dict_path=side_info_id_vec_dict_path.format(cur_time, epoch))
+
+        item_df = extract_item_vectors(embedding_model=embedding_model,
+                                       item_id_side_info_dict=load_dict(neg_samp_id_to_side_info_dict_path),
+                                       id_to_item_dict=load_dict(neg_samp_id_to_item_path),
+                                       csv_path=item_vec_csv_path.format(cur_time, epoch),
+                                       item_dict_path=item_vec_dict_path.format(cur_time, epoch),
+                                       id_dict_path=item_id_vec_dict_path.format(cur_time, epoch))
+
+        print("epoch {0:03d} finished.".format(epoch))
 
         print("\n")
         print("\n")
@@ -263,15 +280,15 @@ if __name__ == '__main__':
     完成训练
     """
     # plot_auc_trend(roc_auc=roc_auc, pr_auc=pr_auc, insert_eval_epoch=insert_eval_epoch)
-    """
-    存储参数
-    """
-    side_info_df = extract_side_info_vectors(embedding_model=embedding_model, tokenizer=load_tokenizer(tokenizer_path),
-                                             csv_path=side_info_vec_csv_path, tag_dict_path=side_info_tag_vec_dict_path,
-                                             id_dict_path=side_info_id_vec_dict_path)
-    item_df = extract_item_vectors(embedding_model=embedding_model,
-                                   item_id_side_info_dict=load_dict(neg_samp_id_to_side_info_dict_path),
-                                   id_to_item_dict=load_dict(neg_samp_id_to_item_path), csv_path=item_vec_csv_path,
-                                   item_dict_path=item_vec_dict_path, id_dict_path=item_id_vec_dict_path)
+    # """
+    # 存储参数
+    # """
+    # side_info_df = extract_side_info_vectors(embedding_model=embedding_model, tokenizer=load_tokenizer(tokenizer_path),
+    #                                          csv_path=side_info_vec_csv_path, tag_dict_path=side_info_tag_vec_dict_path,
+    #                                          id_dict_path=side_info_id_vec_dict_path)
+    # item_df = extract_item_vectors(embedding_model=embedding_model,
+    #                                item_id_side_info_dict=load_dict(neg_samp_id_to_side_info_dict_path),
+    #                                id_to_item_dict=load_dict(neg_samp_id_to_item_path), csv_path=item_vec_csv_path,
+    #                                item_dict_path=item_vec_dict_path, id_dict_path=item_id_vec_dict_path)
 
 
