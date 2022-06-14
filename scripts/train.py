@@ -14,6 +14,7 @@ from data_process.skip_gram_negative_sampling import generate_train_epoch_datase
 from models.SideInfoEmbedding import SideInfoEmbedding
 from utils.plot_tool import plot_auc_trend
 from result_process.generate_vecs import extract_side_info_vectors, extract_item_vectors
+from datetime import datetime
 
 """
 从 configure 里解析 训练的配置
@@ -69,8 +70,8 @@ batch_size = conf.get_int('batch_size')
 buffer_size = conf.get_int('buffer_size')
 # embedding layer 的名称
 layer_name = conf.get_string('layer_name')
-# callbacks存储位置
-callbacks_log = conf.get_string('callbacks_log')
+# # callbacks存储位置
+# callbacks_log = conf.get_string('callbacks_log')
 # 存储训练完成的 side_info 的 csv 文件 包含三列 id， tag， vec
 side_info_vec_csv_path = conf.get_string('side_info_vec_csv_path')
 # 存储训练完成后的 side_info 的 tag -> vec 的dict
@@ -163,95 +164,100 @@ if __name__ == '__main__':
     embedding_model.compile(optimizer='adam', loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
                             metrics='accuracy')
 
-    # 由于初步观察，只需要tensorboard一种call_back
-    # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=callbacks_log)
-    # checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(callbacks_log, save_best_only=False)
-    # earlystop_callback = tf.keras.callbacks.EarlyStopping(patience=5, min_delta=1e-3)
 
-    # callbacks = tf.keras.callbacks.CallbackList([checkpoint_callback])
-    # callbacks = tf.keras.callbacks.CallbackList([tensorboard_callback, checkpoint_callback, earlystop_callback])
     """
     训练开始，生成游走序列，并且skip-gram生成dataset，进行一次fit
+    
+    日志只进行每 epoch 的记录，设置 tf.summary 对每次迭代进行观察
+    
+    训练过程 per step 记录 loss, accuracy, 
+    验证过程 per epoch 记录 recall， PR-AUC， ROC—AUC
     """
-    # pr_auc = []
-    # roc_auc = []
-    insert_eval_epoch = 2
-    logs = {}
-    # callbacks.on_train_begin(logs=logs)
-    # loss_function = tf.keras.losses.BinaryFocalCrossentropy(gamma=2.0, from_logits=True)
-    # train_metrics = tf.keras.metrics.Recall(thresholds=0.5)
+    # 编写摘要记录器
+    cur_time = datetime.now().strftime("%Y%m%d-%H%M%S")
+    train_log_dir = os.path.join(log_path, '{}-train'.format(cur_time))
+    evalu_log_dir = os.path.join(log_path, '{}-evalu'.format(cur_time))
+    train_summary_writer = tf.summary.create_file_writer(train_log_dir)
+    evalu_summary_writer = tf.summary.create_file_writer(evalu_log_dir)
+    # eval 评价使用的 metrics
+    recall_m = tf.keras.metrics.Recall()
     roc_m = tf.keras.metrics.AUC(curve='ROC')
     pr_m = tf.keras.metrics.AUC(curve='PR')
+    # 记录全局训练
+    globel_step = 0
     for epoch in range(epochs):
         print("epoch {0:03d} begin".format(epoch))
-        # callbacks.on_epoch_begin(epoch)
+        print("epoch train")
         random_walk.generate_epoch()
         dataset = generate_train_epoch_dataset(walk_sequence_path=walk_sequence_file_path,
                                                item_to_id_dict=load_dict(item_to_neg_samp_id_path),
                                                vertex_num=vertices_num,
                                                window_size=window_size, negative_sample_rate=negative_sample_rate,
                                                batch_size=batch_size, buffer_size=buffer_size)
-        # AUTOTUNE = tf.data.AUTOTUNE
-        # dataset = dataset.cache().prefetch(buffer_size=AUTOTUNE)
-        # loss_accumulation 和 accurate_accumulation
-        loss_accumulation = []
-        accurate_accumulation = []
+
+
         print("model fit on dataset:")
-        for i, ((t, c), l) in tqdm(dataset.take(1000).enumerate()): # TODO:调试成功后切换
-        # for i, ((t, c), l) in tqdm(dataset.enumerate()):
-        #     callbacks.on_train_batch_begin(i)
+        # TODO:调试成功后注释掉
+        dataset = dataset.take(1000)
+        # TODO:调试成功后注释掉
+        loss_t = tf.constant(0.0)
+        accuracy_t = tf.constant(0.0)
+
+        dataset_size = len(dataset)
+        for i, ((t, c), l) in tqdm(dataset.enumerate()):
             batch_logs = embedding_model.train_step(((t,c), l))
             # {'loss': <tf.Tensor: shape=(), dtype=float32, numpy=1.3398242>, 'accuracy': <tf.Tensor: shape=(), dtype=float32, numpy=0.53125>}
-            loss_accumulation.append(batch_logs['loss'])
-            accurate_accumulation.append(batch_logs['accuracy'])
-            # callbacks.on_train_batch_end(i, batch_logs)
-        # 因为希望能够控制 每个epoch使用不同的随机游走序列训练，所以不使用.fit()
-        # embedding_model.fit(dataset, epochs=1, callbacks=[tensorboard_callback, checkpoint_callback, earlystop_callback])
+            if i == dataset_size - 1:
+                loss_t = batch_logs['loss']
+                accuracy_t = batch_logs['accuracy']
+            with train_summary_writer.as_default():
+                tf.summary.scalar('train-loss', batch_logs['loss'], globel_step + i)
+                tf.summary.scalar('train-accuracy', batch_logs['accuracy'], globel_step + i)
+        globel_step += dataset_size
+        print("Train summary: loss: {} ,  accuracy: {} \n".format(
+            loss_t.numpy(), accuracy_t.numpy()
+        ))
         random_walk.clean_epoch()
 
 
         """
-        迭代内的监控，每两个epoch，计算一下新采样的序列skip-gram的pair 结果的AUC(PR 和 ROC)
+        迭代内的监控，每个epoch，计算一下新采样的序列skip-gram的pair 结果的AUC(PR 和 ROC)
         """
-        if epoch % insert_eval_epoch == 0:
-            roc_m.reset_state()
-            pr_m.reset_state()
-            print("Insert an evaluation:")
-            random_walk.generate_epoch()
-            dataset = generate_train_epoch_dataset(walk_sequence_path=walk_sequence_file_path,
-                                                   item_to_id_dict=load_dict(item_to_neg_samp_id_path),
-                                                   vertex_num=vertices_num,
-                                                   window_size=window_size, negative_sample_rate=negative_sample_rate,
-                                                   batch_size=batch_size, buffer_size=buffer_size)
-            # for batch_pair, batch_label in tqdm(dataset):
-            for batch_pair, batch_label in tqdm(dataset.take(200)): # TODO 调试成功后切换
-                groud_truth = tf.squeeze(batch_label)
-                prediction = tf.clip_by_value(tf.squeeze(embedding_model(batch_pair)), 0.0, 1.0)
-                roc_m.update_state(groud_truth, prediction)
-                pr_m.update_state(groud_truth, prediction)
-                # roc_auc.append(roc_m.result().numpy())
-                # pr_auc.append(pr_m.result().numpy())
-            print("Evaluation finish with AUC under *ROC*    {}    and  AUC under *PR*    {}   .".format(
-                roc_m.result().numpy(), pr_m.result().numpy()))
-            random_walk.clean_epoch()
-        # 汇总本 epoch 的 accuracy 和 loss 进展
-        accuracy = tf.math.reduce_mean(tf.concat(accurate_accumulation, axis=0))
-        loss = tf.math.reduce_mean(tf.concat(loss_accumulation, axis=0))
-        epoch_log = {
-            'loss': loss,
-            'accuracy': accuracy,
-            'pr_auc': pr_m.result(),
-            'roc_auc': roc_m.result()
-        }
-        # callbacks.on_epoch_end(epoch, epoch_log)
-        print("epoch {0:03d} finished.".format(epoch))
+        print("epoch evaluate")
 
-        print("epoch summary: avg_loss: {} ,  avg_accuracy: {} ,  pr_auc: {} ,  roc_auc: {}\n".format(
-            loss.numpy(),
-            accuracy.numpy(),
+        recall_m.reset_state()
+        roc_m.reset_state()
+        pr_m.reset_state()
+        random_walk.generate_epoch()
+        dataset = generate_train_epoch_dataset(walk_sequence_path=walk_sequence_file_path,
+                                               item_to_id_dict=load_dict(item_to_neg_samp_id_path),
+                                               vertex_num=vertices_num,
+                                               window_size=window_size, negative_sample_rate=negative_sample_rate,
+                                               batch_size=batch_size, buffer_size=buffer_size)
+        # for batch_pair, batch_label in tqdm(dataset):
+        for batch_pair, batch_label in tqdm(dataset.take(200)): # TODO 调试成功后切换
+            groud_truth = tf.squeeze(batch_label)
+            prediction = tf.clip_by_value(tf.squeeze(embedding_model(batch_pair)), 0.0, 1.0)
+            roc_m.update_state(groud_truth, prediction)
+            pr_m.update_state(groud_truth, prediction)
+            recall_m.update_state(groud_truth, prediction)
+
+
+        random_walk.clean_epoch()
+        with evalu_summary_writer.as_default():
+            tf.summary.scalar('recall', batch_logs['loss'], epoch)
+            tf.summary.scalar('PR-AUC', batch_logs['loss'], epoch)
+            tf.summary.scalar('ROC-AUC', batch_logs['accuracy'], epoch)
+
+        print("Evaluation summary: recall: {} ,  PR-AUC: {} ,  ROC-AUC: {}\n".format(
+            recall_m.result().numpy(),
             pr_m.result().numpy(),
             roc_m.result().numpy()
         ))
+
+        print("epoch {0:03d} finished.".format(epoch))
+
+
         print("\n")
         print("\n")
 
