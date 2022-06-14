@@ -197,9 +197,7 @@ if __name__ == '__main__':
 
 
         print("model fit on dataset:")
-        # TODO:调试成功后注释掉
-        dataset = dataset.take(1000)
-        # TODO:调试成功后注释掉
+
         loss_t = tf.constant(0.0)
         accuracy_t = tf.constant(0.0)
 
@@ -234,8 +232,7 @@ if __name__ == '__main__':
                                                vertex_num=vertices_num,
                                                window_size=window_size, negative_sample_rate=negative_sample_rate,
                                                batch_size=batch_size, buffer_size=buffer_size)
-        # for batch_pair, batch_label in tqdm(dataset):
-        for batch_pair, batch_label in tqdm(dataset.take(200)): # TODO 调试成功后切换
+        for batch_pair, batch_label in tqdm(dataset):
             groud_truth = tf.squeeze(batch_label)
             prediction = tf.clip_by_value(tf.squeeze(embedding_model(batch_pair)), 0.0, 1.0)
             roc_m.update_state(groud_truth, prediction)

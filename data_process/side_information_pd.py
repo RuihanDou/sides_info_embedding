@@ -94,10 +94,3 @@ def get_side_info_mask(neg_samp_id_side_info_dict: dict):
     mask = tf.cast(tf.math.not_equal(side_info_constant_tensor, 0), tf.float32)
     return mask
 
-
-if __name__ == '__main__':
-    side_info_dict = get_side_information_dict(side_info_path=conf.get_string('side_infomation_path')
-                                               , tokenizer=load_tokenizer(conf.get_string('tokenizer_path'))
-                                               , padding_max_size=conf.get_int('side_info_max_num_tags')
-                                               , catagory_list=conf.get_list('side_info_category'))
-    print(side_info_dict)

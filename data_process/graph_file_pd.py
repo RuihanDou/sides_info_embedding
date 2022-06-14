@@ -53,11 +53,3 @@ def sequences_dataframe_to_graph_pair_file(sequences_path: str
             file.write(graph_file_line_formation.format(pair[0], pair[1], graph_dict[pair]))
 
 
-
-
-
-
-
-if __name__ == '__main__':
-    sequences_dataframe_to_graph_pair_file(sequences_path=conf.get_string('sequences_path'),
-                                           graph_file_path=conf.get_string('graph_file_path'))

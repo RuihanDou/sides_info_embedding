@@ -115,10 +115,6 @@ class RandomWalkSequenceGenerator:
                    visited.add(self.items2id_map[item])
                 if count % 10000 == 0:
                     print(str(round(visited.__len__() / self.items_num * 100, 2)) + "% ready")
-                # TODO ：调试用，调试成功后取消
-                if count == 10000:
-                    break
-                # TODO ：调试用，调试成功后取消
                 seq_start = -1
                 for id in range(self.items_num):
                     if id not in visited:
@@ -139,12 +135,4 @@ class RandomWalkSequenceGenerator:
     def clean_epoch(self):
         os.remove(self.walk_sequence_file_path)
 
-
-if __name__ == '__main__':
-
-    graph_file_path = conf.get_string('graph_file_path')
-    graph = AsymmetricalWeightedGraph(graph_file_path)
-    seq_generator = RandomWalkSequenceGenerator(asymmerical_weighted_graph=graph)
-    seqs = seq_generator.generate_epoch()
-    print("successful")
 
