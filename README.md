@@ -12,6 +12,7 @@ embedding with sides information
 
 
 如果特定组合
+
     item1 : tag_a, tag_b, tag_c
 
     item2 : tag_a, tag_c, tag_d, tag_f
