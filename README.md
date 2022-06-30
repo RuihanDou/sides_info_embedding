@@ -22,4 +22,3 @@ embedding with sides information
 挖掘 tag 和 item 的embedding高维空间关系
 
 
-本项目使用
